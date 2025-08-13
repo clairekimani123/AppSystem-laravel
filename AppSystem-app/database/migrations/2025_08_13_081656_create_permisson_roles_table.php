@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('role_user', function (Blueprint $table) {
+        Schema::create('permisson_roles', function (Blueprint $table) {
             $table->id();
+              $table->integer('user_id')->unsigned();
+              $table->integer('role_id')->unsigned();
             $table->timestamps();
         });
     }
@@ -22,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('role_user');
+        Schema::dropIfExists('permisson_roles');
     }
 };
