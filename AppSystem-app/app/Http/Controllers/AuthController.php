@@ -26,5 +26,56 @@ class AuthController extends Controller
         Log::warning('Authentication failed for: ' . $request->email);
         return response()->json(['error' => 'Unauthorized'], 401);
     }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $status = Password::sendResetLink(
+            $request->only('email')
+        );
+
+        return response()->json(['message' => __($status)], $status === Password::RESET_LINK_SENT ? 200 : 400);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|min:8|confirmed',
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password)
+                ])->setRememberToken(Str::random(60));
+
+                $user->save();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        return response()->json(['message' => __($status)], $status === Password::PASSWORD_RESET ? 200 : 400);
+    }
+
+    public function register(Request $request)
+{
+    $validated = $request->validate([
+        'first_name' => 'required|string|max:255',
+        'last_name' => 'required|string|max:255',
+        'phone' => 'nullable|string|max:255',
+        'email' => 'required|string|email|max:255|unique:users',
+        'password' => 'required|string|min:8',
+    ]);
+
+    $validated['password'] = Hash::make($validated['password']);
+
+    $user = User::create($validated);
+    return response()->json($user, 201);
+}
 }
 ?>
