@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Models\User;
+use Illuminate\Support\Facades\Password;
+
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -28,15 +32,21 @@ class AuthController extends Controller
     }
 
     public function forgotPassword(Request $request)
-    {
-        $request->validate(['email' => 'required|email']);
+{
+   $request->validate(['email' => 'required|email']);
 
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+    $status = Password::sendResetLink(
+        $request->only('email')
+    );
 
-        return response()->json(['message' => __($status)], $status === Password::RESET_LINK_SENT ? 200 : 400);
+    if ($status === Password::RESET_LINK_SENT) {
+        // Log the token for testing (remove in production)
+        $token = \DB::table('password_reset_tokens')->where('email', $request->email)->first()->token;
+        \Log::info('Reset token for ' . $request->email . ': ' . $token);
     }
+
+    return response()->json(['message' => __($status)], $status === Password::RESET_LINK_SENT ? 200 : 400);
+}
 
     public function resetPassword(Request $request)
     {
@@ -72,10 +82,14 @@ class AuthController extends Controller
         'password' => 'required|string|min:8',
     ]);
 
+
     $validated['password'] = Hash::make($validated['password']);
 
     $user = User::create($validated);
-    return response()->json($user, 201);
+
+    return response()->json([
+        "message" => 'User created successfully',
+       201 => $user]);
 }
 }
 ?>

@@ -9,7 +9,7 @@ class PermissionController extends Controller
 {
     public function index()
     {
-        return Permission::all();
+        return Permission::with('roles')->get();
     }
 
     public function store(Request $request)
@@ -21,5 +21,24 @@ class PermissionController extends Controller
 
         $permission = Permission::create($validated);
         return response()->json($permission, 201);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $permission = Permission::findOrFail($id);
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'slug' => 'sometimes|required|string|unique:permissions,slug,' . $id,
+        ]);
+
+        $permission->update($validated);
+        return response()->json($permission, 200);
+    }
+
+    public function destroy($id)
+    {
+        $permission = Permission::findOrFail($id);
+        $permission->delete();
+        return response()->json(['message' => 'Permission deleted'], 200);
     }
 }
