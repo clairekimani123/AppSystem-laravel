@@ -14,7 +14,7 @@ class User extends Authenticatable
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var array<int,string>
      */
     protected $fillable = [
         'first_name',
@@ -23,12 +23,11 @@ class User extends Authenticatable
         'email',
         'password',
     ];
-    
 
     /**
      * The attributes that should be hidden for serialization.
      *
-     * @var array<int, string>
+     * @var array<int,string>
      */
     protected $hidden = [
         'password',
@@ -38,13 +37,36 @@ class User extends Authenticatable
     /**
      * The attributes that should be cast.
      *
-     * @return array<string, string>
+     * @var array<string,string>
      */
-    protected function casts(): array
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        // Laravel 10+ can hash passwords automatically if you want,
+        // but we'll hash explicitly in controllers for clarity.
+        // 'password' => 'hashed',
+    ];
+
+    /**
+     * Override the default reset notification so the reset link points to your frontend.
+     *
+     * @param string $token
+     * @return void
+     */
+    public function sendPasswordResetNotification($token)
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        // Frontend URL - set in .env as FRONTEND_URL
+        $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173'));
+
+        // Build URL expected by your frontend (you can change path as needed)
+        $resetUrl = $frontendUrl . '/reset-password?token=' . urlencode($token) . '&email=' . urlencode($this->email);
+
+        // Configure the default ResetPassword notification to use our URL
+        \Illuminate\Auth\Notifications\ResetPassword::createUrlUsing(function ($notifiable, $token) use ($resetUrl) {
+            // We build the url ourselves to ensure it includes token/email and maps to frontend
+            return $resetUrl;
+        });
+
+        // Send the notification (this will use the ResetPassword notification with our custom URL)
+        $this->notify(new \Illuminate\Auth\Notifications\ResetPassword($token));
     }
 }
